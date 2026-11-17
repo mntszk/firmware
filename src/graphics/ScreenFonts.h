@@ -20,6 +20,10 @@
 #include "graphics/fonts/OLEDDisplayFontsGR.h"
 #endif
 
+#ifdef OLED_JA
+#include "graphics/fonts/OLEDDisplayFontsJA.h"
+#endif
+
 #if (defined(CROWPANEL_ESP32S3_5_EPAPER) || defined(T5_S3_EPAPER_PRO)) && defined(USE_EINK)
 #include "graphics/fonts/EinkDisplayFonts.h"
 #endif
@@ -86,6 +90,15 @@
 #endif
 #endif
 #endif
+#endif
+
+#ifdef OLED_JA
+#undef FONT_SMALL_LOCAL
+#undef FONT_MEDIUM_LOCAL
+#undef FONT_LARGE_LOCAL
+#define FONT_SMALL_LOCAL ArialMT_Plain_10_JA  // Height: 13
+#define FONT_MEDIUM_LOCAL ArialMT_Plain_16_JA // Height: 19
+#define FONT_LARGE_LOCAL ArialMT_Plain_24_JA  // Height: 28
 #endif
 
 // nRF52 flash optimization: re-route FONT_LARGE_LOCAL to the 16pt glyph so
