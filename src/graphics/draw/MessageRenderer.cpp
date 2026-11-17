@@ -1095,9 +1095,13 @@ std::vector<int> calculateLineHeights(const std::vector<std::string> &lines, con
     // Tunables for layout control
     constexpr int HEADER_UNDERLINE_GAP = 0; // space between underline and first body line
     constexpr int HEADER_UNDERLINE_PIX = 1; // underline thickness (1px row drawn)
-    constexpr int BODY_LINE_LEADING = -4;   // default vertical leading for normal body lines
-    constexpr int EMOTE_PADDING_ABOVE = 4;  // space above emote line (added to line above)
-    constexpr int EMOTE_PADDING_BELOW = 3;  // space below emote line (added to emote line)
+#ifdef OLED_JA
+    constexpr int BODY_LINE_LEADING = -2; // kana glyphs are 11px tall, two more than Latin capitals
+#else
+    constexpr int BODY_LINE_LEADING = -4; // default vertical leading for normal body lines
+#endif
+    constexpr int EMOTE_PADDING_ABOVE = 4; // space above emote line (added to line above)
+    constexpr int EMOTE_PADDING_BELOW = 3; // space below emote line (added to emote line)
 
     std::vector<int> rowHeights;
     rowHeights.reserve(lines.size());
