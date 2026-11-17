@@ -101,6 +101,9 @@ class Screen
 #include "../configuration.h"
 #include "gps/GeoCoord.h"
 #include "graphics/ScreenFonts.h"
+#ifdef OLED_JA
+#include "graphics/JapaneseFont.h"
+#endif
 
 #ifdef USE_ST7567
 #include <ST7567Wire.h>
@@ -431,6 +434,10 @@ class Screen : public concurrency::OSThread
     /// Overrides the default utf8 character conversion, to replace empty space with question marks
     static char customFontTableLookup(const uint8_t ch)
     {
+#if defined(OLED_JA)
+        // Japanese uses three-byte UTF-8 sequences, handled by its own converter
+        return graphics::JapaneseFont::lookup(ch);
+#else
         // UTF-8 to font table index converter
         // Code from http://playground.arduino.cc/Main/Utf8ascii
         static uint8_t LASTCHAR;
@@ -676,6 +683,7 @@ class Screen : public concurrency::OSThread
 
         return (uint8_t)191; // otherwise: return ¿ if character can't be converted (note that the font map we're using doesn't
                              // stick to standard EASCII codes)
+#endif // OLED_JA
     }
 
     // Handle observer events

@@ -1037,6 +1037,9 @@ std::vector<std::string> generateLines(OLEDDisplay *display, const char *headerS
     }
 
     std::string line, word;
+#ifdef OLED_JA
+    unsigned char leadByte = 0; // lead byte of the UTF-8 character being read
+#endif
     for (int i = 0; messageBuf[i]; ++i) {
         char ch = messageBuf[i];
         if ((unsigned char)messageBuf[i] == 0xE2 && (unsigned char)messageBuf[i + 1] == 0x80 &&
@@ -1064,6 +1067,18 @@ std::vector<std::string> generateLines(OLEDDisplay *display, const char *headerS
                 line = word;
                 word.clear();
             }
+#ifdef OLED_JA
+            // Japanese text has no spaces between words, so allow a line break after each
+            // Japanese character (UTF-8 lead bytes 0xE3-0xEF: kana, CJK, full/half-width forms)
+            const unsigned char uc = (unsigned char)messageBuf[i];
+            if ((uc & 0xC0) == 0xC0)
+                leadByte = uc;
+            const bool charEnds = ((unsigned char)messageBuf[i + 1] & 0xC0) != 0x80;
+            if (uc >= 0x80 && charEnds && leadByte >= 0xE3 && leadByte <= 0xEF) {
+                line += word;
+                word.clear();
+            }
+#endif
         }
     }
 
