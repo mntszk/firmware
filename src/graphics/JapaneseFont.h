@@ -10,8 +10,9 @@ namespace graphics
 namespace JapaneseFont
 {
 
-static constexpr uint8_t GETA = 0x9A;   // U+3013, placeholder for undisplayable characters
-static constexpr uint8_t DEGREE = 0x9B; // U+00B0
+static constexpr uint8_t GETA = 0x9A;    // U+3013, placeholder for undisplayable characters
+static constexpr uint8_t DEGREE = 0x9B;  // U+00B0
+static constexpr uint8_t CELSIUS = 0x9C; // U+2103, drawn as degree sign + C
 
 // Index for katakana U+30A1..U+30F6; hiragana U+3041..U+3096 share it
 static const uint8_t KANA_TABLE[] = {
@@ -62,6 +63,10 @@ static inline uint8_t codepointToIndex(uint32_t cp)
         return 0xDF;
     case 0x00B0:
         return DEGREE;
+    case 0x2103:
+        return CELSIUS;
+    case 0x301C: // wave dash
+        return '~';
     }
     return GETA;
 }
