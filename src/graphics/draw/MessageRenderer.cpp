@@ -11,6 +11,7 @@
 #include "UptimeClock.h"
 #include "gps/RTC.h"
 #include "graphics/EmoteRenderer.h"
+#include "graphics/JapaneseLineBreak.h"
 #include "graphics/Screen.h"
 #include "graphics/ScreenFonts.h"
 #include "graphics/SharedUIDisplay.h"
@@ -1040,6 +1041,7 @@ std::vector<std::string> generateLines(OLEDDisplay *display, const char *headerS
     std::string line, word;
 #ifdef OLED_JA
     unsigned char leadByte = 0; // lead byte of the UTF-8 character being read
+    int charStart = 0;          // index of that lead byte
 #endif
     for (int i = 0; messageBuf[i]; ++i) {
         char ch = messageBuf[i];
@@ -1061,7 +1063,12 @@ std::vector<std::string> generateLines(OLEDDisplay *display, const char *headerS
         } else {
             word += ch;
             std::string test = line + word;
-            uint16_t strWidth = graphics::UIRenderer::measureStringWithEmotes(display, test.c_str());
+            uint16_t strWidth = 0;
+#ifdef OLED_JA
+            // Measure only at character boundaries so a pushed line never ends inside a UTF-8 sequence
+            if (((unsigned char)messageBuf[i + 1] & 0xC0) != 0x80)
+#endif
+                strWidth = graphics::UIRenderer::measureStringWithEmotes(display, test.c_str());
             if (strWidth > textWidth) {
                 if (!line.empty())
                     lines.push_back(line);
@@ -1070,12 +1077,16 @@ std::vector<std::string> generateLines(OLEDDisplay *display, const char *headerS
             }
 #ifdef OLED_JA
             // Japanese text has no spaces between words, so allow a line break after each
-            // Japanese character (UTF-8 lead bytes 0xE3-0xEF: kana, CJK, full/half-width forms)
+            // Japanese character (UTF-8 lead bytes 0xE3-0xEF) unless kinsoku rules forbid it
             const unsigned char uc = (unsigned char)messageBuf[i];
-            if ((uc & 0xC0) == 0xC0)
+            if ((uc & 0xC0) == 0xC0) {
                 leadByte = uc;
+                charStart = i;
+            }
             const bool charEnds = ((unsigned char)messageBuf[i + 1] & 0xC0) != 0x80;
-            if (uc >= 0x80 && charEnds && leadByte >= 0xE3 && leadByte <= 0xEF) {
+            if (uc >= 0x80 && charEnds && leadByte >= 0xE3 && leadByte <= 0xEF &&
+                graphics::JapaneseLineBreak::canBreakBetween(graphics::JapaneseLineBreak::peekCodePoint(messageBuf + charStart),
+                                                             messageBuf + i + 1)) {
                 line += word;
                 word.clear();
             }
