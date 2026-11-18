@@ -10,9 +10,10 @@ namespace graphics
 namespace JapaneseFont
 {
 
-static constexpr uint8_t GETA = 0x9A;    // U+3013, placeholder for undisplayable characters
-static constexpr uint8_t DEGREE = 0x9B;  // U+00B0
-static constexpr uint8_t CELSIUS = 0x9C; // U+2103, drawn as degree sign + C
+static constexpr uint8_t GETA = 0x9A;       // U+3013, placeholder for undisplayable characters
+static constexpr uint8_t DEGREE = 0x9B;     // U+00B0
+static constexpr uint8_t CELSIUS = 0x9C;    // U+2103, drawn as degree sign + C
+static constexpr uint8_t ARROW_LEFT = 0x9D; // followed by up, right, down as in U+2190..U+2193
 
 // Index for katakana U+30A1..U+30F6; hiragana U+3041..U+3096 share it
 static const uint8_t KANA_TABLE[] = {
@@ -39,7 +40,35 @@ static inline uint8_t codepointToIndex(uint32_t cp)
         return (uint8_t)(cp - 0xFEE0);
     if (cp >= 0x00E0 && cp <= 0x00FF) // Latin-1 lowercase letters
         return (uint8_t)cp;
+    if (cp >= 0x2190 && cp <= 0x2193) // arrows
+        return (uint8_t)(ARROW_LEFT + (cp - 0x2190));
+    if (cp >= 0x2010 && cp <= 0x2015) // hyphens and dashes
+        return '-';
     switch (cp) {
+    case 0xFE0E: // variation selectors after emoji arrows draw nothing
+    case 0xFE0F:
+        return 0;
+    case 0x2B05: // emoji arrows
+        return ARROW_LEFT;
+    case 0x2B06:
+        return ARROW_LEFT + 1;
+    case 0x27A1:
+    case 0x21D2: // rightwards double arrow
+        return ARROW_LEFT + 2;
+    case 0x2B07:
+        return ARROW_LEFT + 3;
+    case 0x2018: // curly quotes
+    case 0x2019:
+        return '\'';
+    case 0x201C:
+    case 0x201D:
+        return '"';
+    case 0x2212: // minus sign
+        return '-';
+    case 0x00D7: // multiplication sign
+        return 'x';
+    case 0x2026: // horizontal ellipsis
+        return 0xA5;
     case 0x3000: // ideographic space
     case 0x00A0: // no-break space
         return ' ';
