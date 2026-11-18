@@ -830,7 +830,11 @@ void drawTextMessageFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16
                 const bool thisLineHasEmote =
                     graphics::EmoteRenderer::analyzeLine(nullptr, cachedLines[b.start].c_str(), 0, emotes, numEmotes).hasEmote;
                 if (thisLineHasEmote) {
+#ifdef OLED_JA_KANJI
+                    constexpr int EMOTE_PADDING_ABOVE = 0; // matches calculateLineHeights
+#else
                     constexpr int EMOTE_PADDING_ABOVE = 4;
+#endif
                     visualTop -= EMOTE_PADDING_ABOVE;
                 }
                 topY = visualTop - BUBBLE_PAD_Y;
@@ -1112,8 +1116,13 @@ std::vector<int> calculateLineHeights(const std::vector<std::string> &lines, con
 #else
     constexpr int BODY_LINE_LEADING = -4; // default vertical leading for normal body lines
 #endif
+#ifdef OLED_JA_KANJI
+    constexpr int EMOTE_PADDING_ABOVE = 0; // 12x12 emotes share the kanji cell
+    constexpr int EMOTE_PADDING_BELOW = 1; // their bottom row would touch the next line
+#else
     constexpr int EMOTE_PADDING_ABOVE = 4; // space above emote line (added to line above)
     constexpr int EMOTE_PADDING_BELOW = 3; // space below emote line (added to emote line)
+#endif
 
     std::vector<int> rowHeights;
     rowHeights.reserve(lines.size());
