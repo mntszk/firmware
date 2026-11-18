@@ -1,0 +1,85 @@
+#pragma once
+#ifdef OLED_JA_KANJI
+// Full-width glyph lookup for OLED_JA_KANJI: UTF-8 decode and binary search over KanjiFontData.
+#ifndef OLED_JA
+#error "OLED_JA_KANJI requires OLED_JA"
+#endif
+#include "graphics/fonts/KanjiFontK8x12.h"
+#include <stddef.h>
+#include <stdint.h>
+
+namespace graphics
+{
+namespace KanjiFont
+{
+static constexpr int GLYPH_WIDTH = KanjiFontData::GLYPH_WIDTH;
+static constexpr int GLYPH_HEIGHT = KanjiFontData::GLYPH_HEIGHT;
+
+// Decode the UTF-8 character at s[pos]; returns its byte length (0 if malformed or truncated).
+static inline size_t decodeUtf8(const char *s, size_t pos, size_t len, uint32_t &cp)
+{
+    const uint8_t c = static_cast<uint8_t>(s[pos]);
+    size_t n;
+    if (c < 0x80) {
+        cp = c;
+        return 1;
+    } else if ((c & 0xE0) == 0xC0) {
+        cp = c & 0x1F;
+        n = 2;
+    } else if ((c & 0xF0) == 0xE0) {
+        cp = c & 0x0F;
+        n = 3;
+    } else if ((c & 0xF8) == 0xF0) {
+        cp = c & 0x07;
+        n = 4;
+    } else {
+        return 0;
+    }
+    if (pos + n > len)
+        return 0;
+    for (size_t i = 1; i < n; i++) {
+        const uint8_t cc = static_cast<uint8_t>(s[pos + i]);
+        if ((cc & 0xC0) != 0x80)
+            return 0;
+        cp = (cp << 6) | (cc & 0x3F);
+    }
+    return n;
+}
+
+// Bitmap (XBM, 8x12) for a code point, or nullptr when the table lacks it.
+static inline const uint8_t *findGlyph(uint32_t cp)
+{
+    if (cp > 0xFFFF)
+        return nullptr;
+    int lo = 0;
+    int hi = KanjiFontData::KANJI_COUNT - 1;
+    while (lo <= hi) {
+        const int mid = (lo + hi) / 2;
+        const uint16_t c = KanjiFontData::KANJI_CODES[mid];
+        if (c == cp)
+            return &KanjiFontData::KANJI_BITMAPS[mid * KanjiFontData::GLYPH_BYTES];
+        if (c < cp)
+            lo = mid + 1;
+        else
+            hi = mid - 1;
+    }
+    return nullptr;
+}
+
+// Glyph for the character at s[pos]; sets charLen to its byte length when found.
+static inline const uint8_t *findGlyphAt(const char *s, size_t pos, size_t len, size_t &charLen)
+{
+    uint32_t cp;
+    const size_t n = decodeUtf8(s, pos, len, cp);
+    if (n < 2)
+        return nullptr;
+    const uint8_t *g = findGlyph(cp);
+    if (g)
+        charLen = n;
+    return g;
+}
+
+} // namespace KanjiFont
+} // namespace graphics
+
+#endif

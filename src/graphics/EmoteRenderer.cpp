@@ -4,11 +4,37 @@
 #include "graphics/EmoteRenderer.h"
 #include <algorithm>
 #include <cstring>
+#ifdef OLED_JA_KANJI
+#include "graphics/KanjiFont.h"
+#endif
 
 namespace graphics
 {
 namespace EmoteRenderer
 {
+
+// Full-width glyph for the character at s[pos] when OLED_JA_KANJI has one; drawn as a bitmap like an emote.
+static inline const uint8_t *fullWidthGlyphAt(const char *s, size_t pos, size_t len, size_t &charLen)
+{
+#ifdef OLED_JA_KANJI
+    if (static_cast<uint8_t>(s[pos]) >= 0xE2)
+        return KanjiFont::findGlyphAt(s, pos, len, charLen);
+#else
+    (void)s;
+    (void)pos;
+    (void)len;
+    (void)charLen;
+#endif
+    return nullptr;
+}
+
+#ifdef OLED_JA_KANJI
+static constexpr int FULL_WIDTH_ADVANCE = KanjiFont::GLYPH_WIDTH;
+static constexpr int FULL_WIDTH_HEIGHT = KanjiFont::GLYPH_HEIGHT;
+#else
+static constexpr int FULL_WIDTH_ADVANCE = 0;
+static constexpr int FULL_WIDTH_HEIGHT = 0;
+#endif
 
 static inline int getStringWidth(OLEDDisplay *display, const char *text, size_t len)
 {
@@ -222,6 +248,14 @@ static LineMetrics analyzeLineInternal(OLEDDisplay *display, const char *line, s
             continue;
         }
 
+        size_t glyphLen = 0;
+        if (fullWidthGlyphAt(line, i, lineLen, glyphLen)) {
+            if (display)
+                metrics.width += FULL_WIDTH_ADVANCE;
+            i += glyphLen;
+            continue;
+        }
+
         const size_t skipLen = ignorableModifierLenAt(line, i, lineLen);
         if (skipLen) {
             i += skipLen;
@@ -339,6 +373,9 @@ size_t truncateToWidth(OLEDDisplay *display, const char *line, char *out, size_t
             }
         }
 
+        if (advance == 0 && fullWidthGlyphAt(line, i, lineLen, advance))
+            tokenWidth = FULL_WIDTH_ADVANCE;
+
         if (advance == 0) {
             const size_t skipLen = ignorableModifierLenAt(line, i, lineLen);
             if (skipLen) {
@@ -423,6 +460,17 @@ void drawStringWithEmotes(OLEDDisplay *display, int x, int y, const char *line, 
             continue;
         }
 
+        size_t glyphLen = 0;
+        const uint8_t *glyph = fullWidthGlyphAt(line, i, lineLen, glyphLen);
+        if (glyph) {
+            if (fauxBold && inBold)
+                display->drawXbm(cursorX + 1, fontY, FULL_WIDTH_ADVANCE, FULL_WIDTH_HEIGHT, glyph);
+            display->drawXbm(cursorX, fontY, FULL_WIDTH_ADVANCE, FULL_WIDTH_HEIGHT, glyph);
+            cursorX += FULL_WIDTH_ADVANCE;
+            i += glyphLen;
+            continue;
+        }
+
         size_t next = i;
         while (next < lineLen) {
             // Stop the text run before the next emote or bold marker.
@@ -434,6 +482,10 @@ void drawStringWithEmotes(OLEDDisplay *display, int x, int y, const char *line, 
 
             size_t nextMatchLen = 0;
             if (findEmoteAt(line, lineLen, next, nextMatchLen, emoteSet, emoteCount) != nullptr)
+                break;
+
+            size_t glyphLen = 0;
+            if (fullWidthGlyphAt(line, next, lineLen, glyphLen))
                 break;
 
             next += utf8CharLenClamped(line, next, lineLen);
